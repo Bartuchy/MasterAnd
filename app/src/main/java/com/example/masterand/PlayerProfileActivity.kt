@@ -30,16 +30,23 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.example.masterand.ui.theme.MasterAndTheme
-import androidx.compose.ui.text.TextStyle
 
 class PlayerProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +57,8 @@ class PlayerProfileActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ProfileScreen()
+                    val navController = rememberNavController()
+                    NavigationGraph(navController)
                 }
             }
         }
@@ -58,7 +66,40 @@ class PlayerProfileActivity : ComponentActivity() {
 }
 
 @Composable
-fun ProfileScreen() {
+fun NavigationGraph(navController: NavHostController) {
+    NavHost(navController = navController, startDestination = "ProfileScreen") {
+        composable("ProfileScreen") {
+            ProfileScreen(onNavigateToGameScreen = { numberOfColors -> navController.navigate("GameScreen/$numberOfColors") })
+        }
+        composable(
+            "GameScreen/{numberOfColors}",
+            arguments = listOf(navArgument("numberOfColors") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val numberOfColors = backStackEntry.arguments?.getString("numberOfColors")!!.toInt()
+
+            GameScreen(
+                onNavigateToProfileScreen = { navController.navigate("ProfileScreen") },
+                onNavigateToResultsScreen = { score -> navController.navigate("ResultsScreen/$score") },
+                numberOfColors
+            )
+
+        }
+        composable("ResultsScreen/{score}") { backStackEntry ->
+            val score = backStackEntry.arguments?.getString("score")!!.toInt()
+
+            ResultsScreen(
+                onNavigateToGameScreen = { navController.navigate("GameScreen/$score") },
+                onNavigateToProfileScreen = { navController.navigate("ProfileScreen") },
+                score = score
+            )
+        }
+    }
+
+}
+
+
+@Composable
+fun ProfileScreen(onNavigateToGameScreen: (numberOfColors: String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -67,6 +108,8 @@ fun ProfileScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+
+
         TitleText()
 
         var profileImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -86,9 +129,14 @@ fun ProfileScreen() {
         })
 
         val errors = remember { mutableStateOf(mapOf<String, Boolean>()) }
-        OutlinedTextFieldWithError(errors)
+        val name = rememberSaveable { mutableStateOf("") }
+        val email = rememberSaveable { mutableStateOf("") }
+        val numberOfColors = rememberSaveable { mutableStateOf("") }
 
-        NextButtonWithValidation(errors = errors)
+        OutlinedTextFieldWithError(name, email, numberOfColors, errors)
+
+
+        StartGameButtonWithValidation(numberOfColors.value, onNavigateToGameScreen, errors = errors)
     }
 }
 
@@ -150,7 +198,12 @@ fun ProfileImageWithPicker(
 }
 
 @Composable
-fun OutlinedTextFieldWithError(errors: MutableState<Map<String, Boolean>>) {
+fun OutlinedTextFieldWithError(
+    name: MutableState<String>,
+    email: MutableState<String>,
+    numberOfColors: MutableState<String>,
+    errors: MutableState<Map<String, Boolean>>
+) {
     fun updateErrorState(key: String, value: Boolean) {
         errors.value = errors.value.toMutableMap().apply {
             this[key] = value
@@ -160,8 +213,9 @@ fun OutlinedTextFieldWithError(errors: MutableState<Map<String, Boolean>>) {
     val outlinedTextFieldsFactory = OutlinedTextFieldsFactory()
     val outlinedTextFieldsValidator = OutlinedTextFieldsValidator()
 
-    outlinedTextFieldsFactory.ProduceOutlinedNameTextField(
+    outlinedTextFieldsFactory.ProduceOutlinedTextField(
         label = "Enter name",
+        name,
         supportingText = "Name can't be empty",
         validate = { text ->
             val isValid = outlinedTextFieldsValidator.isNameFieldValid(text)
@@ -169,8 +223,9 @@ fun OutlinedTextFieldWithError(errors: MutableState<Map<String, Boolean>>) {
             isValid
         }
     )
-    outlinedTextFieldsFactory.ProduceOutlinedNameTextField(
+    outlinedTextFieldsFactory.ProduceOutlinedTextField(
         label = "Enter email",
+        email,
         supportingText = "Email should be in proper format and can't be empty",
         validate = { text ->
             val isValid = outlinedTextFieldsValidator.isEmailFieldValid(text)
@@ -178,8 +233,9 @@ fun OutlinedTextFieldWithError(errors: MutableState<Map<String, Boolean>>) {
             isValid
         }
     )
-    outlinedTextFieldsFactory.ProduceOutlinedNameTextField(
+    outlinedTextFieldsFactory.ProduceOutlinedTextField(
         label = "Enter number of colors",
+        numberOfColors,
         supportingText = "Number of colors should be between 5 and 10 adn can't be empty",
         validate = { text ->
             val isValid = outlinedTextFieldsValidator.isNumOfColorsFieldValid(text)
@@ -190,15 +246,19 @@ fun OutlinedTextFieldWithError(errors: MutableState<Map<String, Boolean>>) {
 }
 
 @Composable
-fun NextButtonWithValidation(errors: MutableState<Map<String, Boolean>>) {
+fun StartGameButtonWithValidation(
+    numberOfColors: String,
+    onNavigateToGameScreen: (numberOfColors: String) -> Unit,
+    errors: MutableState<Map<String, Boolean>>
+) {
     val hasErrors = errors.value.values.contains(false) || errors.value.isEmpty()
 
     Button(
         modifier = Modifier.fillMaxWidth(),
         enabled = !hasErrors,
-        onClick = { /*TODO*/ }
+        onClick = { onNavigateToGameScreen(numberOfColors) }
     ) {
-        Text("Next")
+        Text("Start game")
     }
 }
 
