@@ -3,10 +3,14 @@ package com.example.masterand
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,16 +40,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.masterand.ui.theme.MasterAndTheme
+import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 
@@ -105,20 +112,21 @@ fun GameScreen(
         ) {
             items(items = data) { row ->
 
-                val appearState = remember(row.id) { mutableStateOf(false) }
+                val rowVisible = remember(row.id) { mutableStateOf(false) }
                 if (row.id == data.last().id) {
                     LaunchedEffect(key1 = row.id) {
-                        appearState.value = true
+                        rowVisible.value = true
                     }
                 }
 
                 AnimatedVisibility(
-                    visible = appearState.value,
+                    visible = rowVisible.value,
                     enter = expandVertically(
-                        animationSpec = tween(
-                            durationMillis = 500,
-                            easing = LinearOutSlowInEasing
-                        )
+                        expandFrom = Alignment.Top,
+//                        animationSpec = tween(
+//                            durationMillis = 500,
+//                            easing = LinearOutSlowInEasing
+//                        )
                     )
                 ) {
                     GameRow(
@@ -147,7 +155,9 @@ fun GameScreen(
                             } else {
                                 isWon.value = true
                             }
-                        })
+                        },
+                        isFilled = row.isFilled
+                    )
                 }
             }
         }
@@ -180,21 +190,24 @@ fun GameRow(
     callbackColors: List<Color>,
     isClickable: Boolean,
     onSelectColorClick: (circularButtonIndex: Int) -> Unit,
-    onCheckClick: () -> Unit
+    onCheckClick: () -> Unit,
+    isFilled: Boolean
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         SelectableColorsRow(selectedColors, onSelectColorClick)
         Spacer(modifier = Modifier.padding(2.dp))
 
-        IconButton(modifier = Modifier
-            .size(50.dp)
-            .background(color = MaterialTheme.colorScheme.background),
-            enabled = isClickable,
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = Color.White,
-                contentColor = MaterialTheme.colorScheme.onBackground
-            ), onClick = { onCheckClick() }) {
-            Icon(imageVector = Icons.Filled.Check, contentDescription = "icon")
+        AnimatedVisibility(visible = !selectedColors.contains(Color.White) && isClickable, enter = scaleIn(), exit = scaleOut()) {
+            IconButton(modifier = Modifier
+                .size(50.dp)
+                .background(color = MaterialTheme.colorScheme.background),
+                enabled = isClickable,
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = Color.White,
+                    contentColor = MaterialTheme.colorScheme.onBackground
+                ), onClick = { onCheckClick() }) {
+                Icon(imageVector = Icons.Filled.Check, contentDescription = "icon")
+            }
         }
 
         FeedbackCircles(callbackColors)
@@ -218,19 +231,58 @@ fun SelectableColorsRow(colors: List<Color>, onClick: (circularButtonIndex: Int)
 
 @Composable
 fun CircularButton(onClick: () -> Unit, color: Color) {
+    val colorAnimation0 = remember { Animatable(Color.Blue) }
+    val colorAnimation1 = remember { Animatable(Color.Red) }
+
+    // Stan wewnętrzny śledzący, czy przycisk jest w stanie początkowym.
+    var isInitial by remember { mutableStateOf(true) }
+
+    // Stan wewnętrzny śledzący, czy ma wystąpić animacja.
+    var animate by remember { mutableStateOf(false) }
+
+    // Stan wewnętrzny śledzący poprzedni kolor przycisku.
+    var oldColor by remember { mutableStateOf(Color.Gray) }
+
+    // Utworzenie obiektu Transition, który kontroluje animacje przy zmianie stanu.
+    val transition = updateTransition(isInitial, label = "")
+
+    // Animacja koloru przycisku przy pomocy Transition.
+    val animatedColor by transition.animateColor(label = "") { initialState ->
+        if (initialState) color else oldColor
+    }
+
+//    LaunchedEffect(colors) {
+//        colorAnimation0.animateTo(Color.Yellow, animationSpec = tween(500))
+//        colorAnimation1.animateTo(Color.Blue, animationSpec = tween(500))
+//    }
+
+
     Button(
         modifier = Modifier
             .size(50.dp)
             .background(color = MaterialTheme.colorScheme.background),
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.outline),
         colors = ButtonDefaults.buttonColors(
-            containerColor = color,
+            containerColor = animatedColor,
             contentColor = MaterialTheme.colorScheme.onBackground
         ),
+
         onClick = {
             onClick()
+            animate = true
+            oldColor = animatedColor
         }) {
 
+    }
+
+    if (animate) {
+        LaunchedEffect(key1 = Unit) {
+            repeat(6) {
+                delay(100)
+                isInitial = !isInitial
+            }
+            animate = false
+        }
     }
 }
 
@@ -241,25 +293,40 @@ fun FeedbackCircles(colors: List<Color>) {
             verticalAlignment = Alignment.Top,
             modifier = Modifier.padding(2.dp)
         ) {
-            SmallCircle(color = colors[0])
-            SmallCircle(color = colors[1])
+            SmallCircle(color = colors[0], delay = 250)
+            SmallCircle(color = colors[1], delay = 500)
         }
         Row(
             verticalAlignment = Alignment.Bottom,
             modifier = Modifier.padding(2.dp)
         ) {
-            SmallCircle(color = colors[2])
-            SmallCircle(color = colors[3])
+            SmallCircle(color = colors[2], delay = 750)
+            SmallCircle(color = colors[3], delay = 1000)
         }
     }
 }
 
 @Composable
-fun SmallCircle(color: Color) {
+fun SmallCircle(color: Color, delay: Int) {
+    var circleColor by remember { mutableStateOf(color) }
+
+    LaunchedEffect(color) {
+        circleColor = color
+    }
+
+    val colorTransition = updateTransition(circleColor, label = "")
+    val containerColor by colorTransition.animateColor(
+        transitionSpec = {
+            tween(durationMillis = 250, delayMillis = delay)
+        }, label = ""
+    ) { targetColor ->
+        targetColor
+    }
+
     Box(
         modifier = Modifier
             .clip(CircleShape)
-            .background(color)
+            .background(containerColor)
             .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
             .size(20.dp)
     )
@@ -322,28 +389,8 @@ private fun selectRandomColors(availableColors: List<Color>): List<Color> {
 
 private fun checkColors(
     pickedColors: List<Color>,
-    correctColors: List<Color>,
-    //missingColor: Color
+    correctColors: List<Color>
 ): List<Color> {
-//    val feedbackColors = mutableListOf<Color>()
-//    val mutableCorrectColors = correctColors.toMutableList()
-//
-//    for (i in pickedColors.indices) {
-//        val pickedColor = pickedColors[i]
-//        val correctColor = mutableCorrectColors[i]
-//
-//        if (pickedColor == correctColor) {
-//            feedbackColors.add(Color.Red)
-//            mutableCorrectColors[i] = missingColor
-//        } else if (mutableCorrectColors.contains(pickedColor)) {
-//            feedbackColors.add(Color.Yellow)
-//            mutableCorrectColors[mutableCorrectColors.indexOf(pickedColor)] = missingColor
-//        } else {
-//            feedbackColors.add(missingColor)
-//        }
-//    }
-//
-//    return feedbackColors
     val selectionResults = mutableListOf(Color.White, Color.White, Color.White, Color.White)
     pickedColors.forEachIndexed { index, color ->
         if (correctColors.contains(color)) {

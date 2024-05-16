@@ -7,6 +7,16 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.EaseIn
+import androidx.compose.animation.core.EaseOut
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,13 +38,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -68,7 +82,27 @@ class PlayerProfileActivity : ComponentActivity() {
 @Composable
 fun NavigationGraph(navController: NavHostController) {
     NavHost(navController = navController, startDestination = "ProfileScreen") {
-        composable("ProfileScreen") {
+        composable(route = "ProfileScreen",
+            enterTransition = {
+                fadeIn(animationSpec = tween(500)) +
+                        slideIntoContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                            animationSpec = tween(
+                                durationMillis = 500,
+                                easing = EaseIn
+                            )
+                        )
+            },
+            exitTransition = {
+                fadeOut(animationSpec = tween(500)) +
+                        slideOutOfContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.End,
+                            animationSpec = tween(
+                                durationMillis = 500,
+                                easing = EaseOut
+                            )
+                        )
+            }) {
             ProfileScreen(onNavigateToGameScreen = { numberOfColors -> navController.navigate("GameScreen/$numberOfColors") })
         }
         composable(
@@ -79,16 +113,17 @@ fun NavigationGraph(navController: NavHostController) {
 
             GameScreen(
                 onNavigateToProfileScreen = { navController.navigate("ProfileScreen") },
-                onNavigateToResultsScreen = { score -> navController.navigate("ResultsScreen/$score") },
+                onNavigateToResultsScreen = { score -> navController.navigate("ResultsScreen/$score/$numberOfColors") },
                 numberOfColors
             )
 
         }
-        composable("ResultsScreen/{score}") { backStackEntry ->
+        composable("ResultsScreen/{score}/{numberOfColors}") { backStackEntry ->
             val score = backStackEntry.arguments?.getString("score")!!.toInt()
+            val numberOfColors = backStackEntry.arguments?.getString("numberOfColors")!!.toInt()
 
             ResultsScreen(
-                onNavigateToGameScreen = { navController.navigate("GameScreen/$score") },
+                onNavigateToGameScreen = { navController.navigate("GameScreen/$numberOfColors") },
                 onNavigateToProfileScreen = { navController.navigate("ProfileScreen") },
                 score = score
             )
@@ -128,13 +163,17 @@ fun ProfileScreen(onNavigateToGameScreen: (numberOfColors: String) -> Unit) {
             )
         })
 
-        val errors = remember { mutableStateOf(mapOf<String, Boolean>()) }
+        val errors = remember {
+            mutableStateMapOf(
+                Pair("name", false), Pair("email", false), Pair("numberOfColors", false)
+            )
+        }
+
         val name = rememberSaveable { mutableStateOf("") }
         val email = rememberSaveable { mutableStateOf("") }
         val numberOfColors = rememberSaveable { mutableStateOf("") }
 
         OutlinedTextFieldWithError(name, email, numberOfColors, errors)
-
 
         StartGameButtonWithValidation(numberOfColors.value, onNavigateToGameScreen, errors = errors)
     }
@@ -145,11 +184,26 @@ fun TitleText(
     text: String = "MasterAnd",
     style: TextStyle = MaterialTheme.typography.displayLarge,
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000),
+            repeatMode = RepeatMode.Reverse
+        ), label = ""
+    )
+
     Text(
         text = text,
         style = style,
         modifier = Modifier
             .padding(bottom = 48.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                transformOrigin = TransformOrigin.Center
+            }
     )
 }
 
@@ -202,12 +256,10 @@ fun OutlinedTextFieldWithError(
     name: MutableState<String>,
     email: MutableState<String>,
     numberOfColors: MutableState<String>,
-    errors: MutableState<Map<String, Boolean>>
+    errors: SnapshotStateMap<String, Boolean>
 ) {
     fun updateErrorState(key: String, value: Boolean) {
-        errors.value = errors.value.toMutableMap().apply {
-            this[key] = value
-        }
+        errors[key] = value
     }
 
     val outlinedTextFieldsFactory = OutlinedTextFieldsFactory()
@@ -239,7 +291,7 @@ fun OutlinedTextFieldWithError(
         supportingText = "Number of colors should be between 5 and 10 adn can't be empty",
         validate = { text ->
             val isValid = outlinedTextFieldsValidator.isNumOfColorsFieldValid(text)
-            updateErrorState("numOfColors", isValid)
+            updateErrorState("numberOfColors", isValid)
             isValid
         }
     )
@@ -249,9 +301,9 @@ fun OutlinedTextFieldWithError(
 fun StartGameButtonWithValidation(
     numberOfColors: String,
     onNavigateToGameScreen: (numberOfColors: String) -> Unit,
-    errors: MutableState<Map<String, Boolean>>
+    errors: SnapshotStateMap<String, Boolean>
 ) {
-    val hasErrors = errors.value.values.contains(false) || errors.value.isEmpty()
+    val hasErrors = errors.values.contains(false)
 
     Button(
         modifier = Modifier.fillMaxWidth(),

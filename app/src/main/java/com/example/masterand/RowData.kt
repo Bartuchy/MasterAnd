@@ -10,6 +10,7 @@ class RowData(var id: Int) {
     var selectedColors = mutableStateListOf(Color.White, Color.White, Color.White, Color.White)
     var callbackColors = mutableStateListOf(Color.White, Color.White, Color.White, Color.White)
     var isClickable by mutableStateOf(true)
+    var isFilled by mutableStateOf(!selectedColors.contains(Color.White))
 
 
 }
