@@ -41,19 +41,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.masterand.ui.theme.MasterAndTheme
+import com.example.masterand.viewmodel.AppViewModelProvider
+import com.example.masterand.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
-import kotlin.random.Random
+import kotlinx.coroutines.launch
 
 
 class GameActivity : ComponentActivity() {
@@ -66,7 +68,7 @@ class GameActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    GameScreen(onNavigateToProfileScreen = {}, onNavigateToResultsScreen = {}, 5)
+                    GameScreen(onNavigateToProfileScreen = {}, onNavigateToResultsScreen = {}, numberOfColors = 5, playerId = 1L)
                 }
             }
         }
@@ -75,24 +77,28 @@ class GameActivity : ComponentActivity() {
 
 @Composable
 fun GameScreen(
+    viewModel: GameViewModel = viewModel(factory = AppViewModelProvider.Factory),
     onNavigateToProfileScreen: () -> Unit,
     onNavigateToResultsScreen: (score: Int) -> Unit,
-    numberOfColors: Int
+    numberOfColors: Int,
+    playerId: Long
 ) {
-    val availableColors = generateRandomColors(numberOfColors)
-    val correctColors = selectRandomColors(availableColors)
-
-
-    val data = remember {
-        mutableStateListOf(RowData(1))
-    }
-    val score = remember {
-        mutableIntStateOf(1)
-    }
-
-    val isWon = remember {
-        mutableStateOf(false)
-    }
+    viewModel.numberOfColors = numberOfColors
+    viewModel.playerId = playerId
+//    val availableColors = generateRandomColors(numberOfColors)
+//    val correctColors = selectRandomColors(availableColors)
+//
+//
+//    val data = remember {
+//        mutableStateListOf(RowData(1))
+//    }
+//    val score = remember {
+//        mutableIntStateOf(1)
+//    }
+//
+//    val isWon = remember {
+//        mutableStateOf(false)
+//    }
 
     Column(
         modifier = Modifier
@@ -102,7 +108,7 @@ fun GameScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        ScoreText(score)
+        ScoreText(viewModel.score)
 
         LazyColumn(
             modifier = Modifier
@@ -110,10 +116,10 @@ fun GameScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            items(items = data) { row ->
+            items(items = viewModel.data) { row ->
 
                 val rowVisible = remember(row.id) { mutableStateOf(false) }
-                if (row.id == data.last().id) {
+                if (row.id == viewModel.data.last().id) {
                     LaunchedEffect(key1 = row.id) {
                         rowVisible.value = true
                     }
@@ -135,7 +141,7 @@ fun GameScreen(
                         isClickable = row.isClickable,
                         onSelectColorClick = { index ->
                             row.selectedColors[index] = selectNextAvailableColor(
-                                availableColors = availableColors,
+                                availableColors = viewModel.availableColors,
                                 selectedColors = row.selectedColors,
                                 circularButtonIndex = index
                             )
@@ -145,15 +151,15 @@ fun GameScreen(
                             row.callbackColors.addAll(
                                 checkColors(
                                     pickedColors = row.selectedColors,
-                                    correctColors = correctColors
+                                    correctColors = viewModel.correctColors
                                 )
                             )
                             row.isClickable = false
-                            if (correctColors != row.selectedColors) {
-                                data.add(RowData(row.id + 1))
-                                score.intValue++
+                            if (viewModel.correctColors != row.selectedColors) {
+                                viewModel.data.add(RowData(row.id + 1))
+                                viewModel.score.intValue++
                             } else {
-                                isWon.value = true
+                                viewModel.isWon.value = true
                             }
                         },
                         isFilled = row.isFilled
@@ -162,10 +168,10 @@ fun GameScreen(
             }
         }
 
-        if (isWon.value) {
+        if (viewModel.isWon.value) {
             HighScoreButtonButton(
                 onNavigateToResultsScreen = onNavigateToResultsScreen,
-                score = score.intValue
+                viewModel
             )
         }
         Spacer(modifier = Modifier.weight(1f))
@@ -334,11 +340,17 @@ fun SmallCircle(color: Color, delay: Int) {
 }
 
 @Composable
-fun HighScoreButtonButton(onNavigateToResultsScreen: (score: Int) -> Unit, score: Int) {
-    println(score)
+fun HighScoreButtonButton(onNavigateToResultsScreen: (score: Int) -> Unit, viewModel: GameViewModel) {
+    val coroutineScope = rememberCoroutineScope()
     Button(modifier = Modifier
         .padding(16.dp)
-        .wrapContentHeight(Alignment.Top), onClick = { onNavigateToResultsScreen(score) }) {
+        .wrapContentHeight(Alignment.Top),
+        onClick = {
+            coroutineScope.launch {
+                viewModel.saveNewScore()
+            }
+            onNavigateToResultsScreen(viewModel.score.intValue)
+        }) {
         Text("High score")
     }
 }
@@ -350,20 +362,20 @@ fun LogoutButton(onNavigateToProfileScreen: () -> Unit) {
     }
 }
 
-private fun generateRandomColors(numberOfColors: Int): List<Color> {
-    val randomColors = mutableListOf<Color>()
-
-    repeat(numberOfColors) {
-        val red = Random.nextFloat()
-        val green = Random.nextFloat()
-        val blue = Random.nextFloat()
-
-        val color = Color(red, green, blue)
-        randomColors.add(color)
-    }
-
-    return randomColors
-}
+//private fun generateRandomColors(numberOfColors: Int): List<Color> {
+//    val randomColors = mutableListOf<Color>()
+//
+//    repeat(numberOfColors) {
+//        val red = Random.nextFloat()
+//        val green = Random.nextFloat()
+//        val blue = Random.nextFloat()
+//
+//        val color = Color(red, green, blue)
+//        randomColors.add(color)
+//    }
+//
+//    return randomColors
+//}
 
 private fun selectNextAvailableColor(
     availableColors: List<Color>,
@@ -383,9 +395,9 @@ private fun selectNextAvailableColor(
     }
 }
 
-private fun selectRandomColors(availableColors: List<Color>): List<Color> {
-    return availableColors.shuffled().take(4)
-}
+//private fun selectRandomColors(availableColors: List<Color>): List<Color> {
+//    return availableColors.shuffled().take(4)
+//}
 
 private fun checkColors(
     pickedColors: List<Color>,

@@ -38,11 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +49,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -61,6 +58,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.example.masterand.ui.theme.MasterAndTheme
+import com.example.masterand.viewmodel.AppViewModelProvider
+import com.example.masterand.viewmodel.ProfileViewModel
+import kotlinx.coroutines.launch
 
 class PlayerProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,27 +103,34 @@ fun NavigationGraph(navController: NavHostController) {
                             )
                         )
             }) {
-            ProfileScreen(onNavigateToGameScreen = { numberOfColors -> navController.navigate("GameScreen/$numberOfColors") })
+            ProfileScreen(onNavigateToGameScreen = { playerId, numberOfColors ->
+                navController.navigate(
+                    "GameScreen/$playerId/$numberOfColors"
+                )
+            })
         }
         composable(
-            "GameScreen/{numberOfColors}",
+            "GameScreen/{playerId}/{numberOfColors}",
             arguments = listOf(navArgument("numberOfColors") { type = NavType.StringType })
         ) { backStackEntry ->
+            val playerId = backStackEntry.arguments?.getString("playerId")!!.toLong()
             val numberOfColors = backStackEntry.arguments?.getString("numberOfColors")!!.toInt()
 
             GameScreen(
                 onNavigateToProfileScreen = { navController.navigate("ProfileScreen") },
-                onNavigateToResultsScreen = { score -> navController.navigate("ResultsScreen/$score/$numberOfColors") },
-                numberOfColors
+                onNavigateToResultsScreen = { score -> navController.navigate("ResultsScreen/$playerId/$score/$numberOfColors") },
+                numberOfColors = numberOfColors,
+                playerId = playerId
             )
 
         }
-        composable("ResultsScreen/{score}/{numberOfColors}") { backStackEntry ->
+        composable("ResultsScreen/{playerId}/{score}/{numberOfColors}") { backStackEntry ->
             val score = backStackEntry.arguments?.getString("score")!!.toInt()
             val numberOfColors = backStackEntry.arguments?.getString("numberOfColors")!!.toInt()
+            val playerId = backStackEntry.arguments?.getString("playerId")!!.toLong()
 
             ResultsScreen(
-                onNavigateToGameScreen = { navController.navigate("GameScreen/$numberOfColors") },
+                onNavigateToGameScreen = { navController.navigate("GameScreen/$playerId/$numberOfColors") },
                 onNavigateToProfileScreen = { navController.navigate("ProfileScreen") },
                 score = score
             )
@@ -134,7 +141,10 @@ fun NavigationGraph(navController: NavHostController) {
 
 
 @Composable
-fun ProfileScreen(onNavigateToGameScreen: (numberOfColors: String) -> Unit) {
+fun ProfileScreen(
+    onNavigateToGameScreen: (playerId: Long, numberOfColors: String) -> Unit,
+    viewModel: ProfileViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -147,35 +157,44 @@ fun ProfileScreen(onNavigateToGameScreen: (numberOfColors: String) -> Unit) {
 
         TitleText()
 
-        var profileImageUri by remember { mutableStateOf<Uri?>(null) }
+//        var profileImageUri by remember { mutableStateOf<Uri?>(null) }
 
         val imagePicker = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.PickVisualMedia(),
             onResult = { selectedUri ->
                 if (selectedUri != null) {
-                    profileImageUri = selectedUri
+                    viewModel.profileImageUri.value = selectedUri
                 }
             })
 
-        ProfileImageWithPicker(profileImageUri, selectImageOnClick = {
+        ProfileImageWithPicker(viewModel.profileImageUri.value, selectImageOnClick = {
             imagePicker.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
             )
         })
 
-        val errors = remember {
-            mutableStateMapOf(
-                Pair("name", false), Pair("email", false), Pair("numberOfColors", false)
-            )
-        }
+//        val errors = remember {
+//            mutableStateMapOf(
+//                Pair("name", false), Pair("email", false), Pair("numberOfColors", false)
+//            )
+//        }
 
-        val name = rememberSaveable { mutableStateOf("") }
-        val email = rememberSaveable { mutableStateOf("") }
-        val numberOfColors = rememberSaveable { mutableStateOf("") }
+//        val name = rememberSaveable { mutableStateOf("") }
+//        val email = rememberSaveable { mutableStateOf("") }
+//        val numberOfColors = rememberSaveable { mutableStateOf("") }
 
-        OutlinedTextFieldWithError(name, email, numberOfColors, errors)
-
-        StartGameButtonWithValidation(numberOfColors.value, onNavigateToGameScreen, errors = errors)
+        OutlinedTextFieldWithError(
+            viewModel.name,
+            viewModel.email,
+            viewModel.numberOfColors,
+            viewModel.errors
+        )
+        println("xd" + viewModel.errors.values.toList())
+        StartGameButtonWithValidation(
+            viewModel,
+            onNavigateToGameScreen,
+            errors = viewModel.errors
+        )
     }
 }
 
@@ -299,16 +318,28 @@ fun OutlinedTextFieldWithError(
 
 @Composable
 fun StartGameButtonWithValidation(
-    numberOfColors: String,
-    onNavigateToGameScreen: (numberOfColors: String) -> Unit,
+    viewModel: ProfileViewModel,
+    onNavigateToGameScreen: (playerId: Long, numberOfColors: String) -> Unit,
     errors: SnapshotStateMap<String, Boolean>
 ) {
+    val coroutineScope = rememberCoroutineScope()
     val hasErrors = errors.values.contains(false)
 
     Button(
         modifier = Modifier.fillMaxWidth(),
         enabled = !hasErrors,
-        onClick = { onNavigateToGameScreen(numberOfColors) }
+        onClick = {
+            coroutineScope.launch {
+                var loggedInPlayerId = viewModel.savePlayer()
+                println("PlayerID: $loggedInPlayerId")
+                if (loggedInPlayerId == -1L) {
+                    val player = viewModel.getPlayerByEmail()
+                    loggedInPlayerId = player?.playerId ?: -1L
+                }
+                onNavigateToGameScreen(loggedInPlayerId, viewModel.numberOfColors.value)
+            }
+
+        }
     ) {
         Text("Start game")
     }
