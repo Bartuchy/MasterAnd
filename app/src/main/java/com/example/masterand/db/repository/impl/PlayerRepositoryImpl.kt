@@ -4,8 +4,9 @@ import com.example.masterand.db.dao.PlayerDao
 import com.example.masterand.db.entity.Player
 import com.example.masterand.db.repository.PlayerRepository
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
-class PlayersRepositoryImpl(private val playerDao: PlayerDao) : PlayerRepository {
+class PlayerRepositoryImpl @Inject constructor(private val playerDao: PlayerDao) : PlayerRepository {
     override fun getAllPlayersStream(): Flow<List<Player>> {
         TODO("Not yet implemented")
     }

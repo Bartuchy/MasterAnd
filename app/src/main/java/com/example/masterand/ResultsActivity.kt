@@ -25,9 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.masterand.ui.theme.MasterAndTheme
-import com.example.masterand.viewmodel.AppViewModelProvider
 import com.example.masterand.viewmodel.ResultsViewModel
 
 class ResultsActivity : ComponentActivity() {
@@ -53,7 +52,7 @@ class ResultsActivity : ComponentActivity() {
 
 @Composable
 fun ResultsScreen(
-    viewModel: ResultsViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    viewModel: ResultsViewModel = hiltViewModel<ResultsViewModel>(),
     onNavigateToProfileScreen: () -> Unit,
     onNavigateToGameScreen: () -> Unit,
     score: Int
@@ -113,7 +112,7 @@ fun ResultsScreen(
                             style = MaterialTheme.typography.headlineLarge
                         )
                     }
-                    Divider(color= Color.Black)
+                    Divider(color = Color.Black)
                 }
             }
         }

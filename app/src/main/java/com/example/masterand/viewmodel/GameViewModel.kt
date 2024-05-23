@@ -8,9 +8,12 @@ import androidx.lifecycle.ViewModel
 import com.example.masterand.RowData
 import com.example.masterand.db.entity.Score
 import com.example.masterand.db.repository.ScoreRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlin.random.Random
 
-class GameViewModel(private val scoreRepository: ScoreRepository) : ViewModel() {
+@HiltViewModel
+class GameViewModel @Inject constructor(private val scoreRepository: ScoreRepository) : ViewModel() {
 
     var numberOfColors: Int = 5
     var playerId: Long = 0L

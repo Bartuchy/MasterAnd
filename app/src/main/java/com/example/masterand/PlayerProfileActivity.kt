@@ -49,7 +49,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -58,10 +58,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import coil.compose.AsyncImage
 import com.example.masterand.ui.theme.MasterAndTheme
-import com.example.masterand.viewmodel.AppViewModelProvider
 import com.example.masterand.viewmodel.ProfileViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class PlayerProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -143,7 +144,7 @@ fun NavigationGraph(navController: NavHostController) {
 @Composable
 fun ProfileScreen(
     onNavigateToGameScreen: (playerId: Long, numberOfColors: String) -> Unit,
-    viewModel: ProfileViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: ProfileViewModel = hiltViewModel<ProfileViewModel>()
 ) {
     Column(
         modifier = Modifier

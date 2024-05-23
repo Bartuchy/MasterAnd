@@ -50,9 +50,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.masterand.ui.theme.MasterAndTheme
-import com.example.masterand.viewmodel.AppViewModelProvider
 import com.example.masterand.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -68,7 +67,12 @@ class GameActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    GameScreen(onNavigateToProfileScreen = {}, onNavigateToResultsScreen = {}, numberOfColors = 5, playerId = 1L)
+                    GameScreen(
+                        onNavigateToProfileScreen = {},
+                        onNavigateToResultsScreen = {},
+                        numberOfColors = 5,
+                        playerId = 1L
+                    )
                 }
             }
         }
@@ -77,7 +81,7 @@ class GameActivity : ComponentActivity() {
 
 @Composable
 fun GameScreen(
-    viewModel: GameViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    viewModel: GameViewModel = hiltViewModel<GameViewModel>(),
     onNavigateToProfileScreen: () -> Unit,
     onNavigateToResultsScreen: (score: Int) -> Unit,
     numberOfColors: Int,
@@ -203,7 +207,11 @@ fun GameRow(
         SelectableColorsRow(selectedColors, onSelectColorClick)
         Spacer(modifier = Modifier.padding(2.dp))
 
-        AnimatedVisibility(visible = !selectedColors.contains(Color.White) && isClickable, enter = scaleIn(), exit = scaleOut()) {
+        AnimatedVisibility(
+            visible = !selectedColors.contains(Color.White) && isClickable,
+            enter = scaleIn(),
+            exit = scaleOut()
+        ) {
             IconButton(modifier = Modifier
                 .size(50.dp)
                 .background(color = MaterialTheme.colorScheme.background),
@@ -340,7 +348,10 @@ fun SmallCircle(color: Color, delay: Int) {
 }
 
 @Composable
-fun HighScoreButtonButton(onNavigateToResultsScreen: (score: Int) -> Unit, viewModel: GameViewModel) {
+fun HighScoreButtonButton(
+    onNavigateToResultsScreen: (score: Int) -> Unit,
+    viewModel: GameViewModel
+) {
     val coroutineScope = rememberCoroutineScope()
     Button(modifier = Modifier
         .padding(16.dp)
