@@ -1,4 +1,4 @@
-package com.example.masterand
+package com.example.masterand.app.profile.helpers
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth

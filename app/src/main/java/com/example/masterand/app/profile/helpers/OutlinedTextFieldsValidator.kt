@@ -1,4 +1,4 @@
-package com.example.masterand
+package com.example.masterand.app.profile.helpers
 
 import java.util.regex.Pattern
 

@@ -1,4 +1,4 @@
-package com.example.masterand
+package com.example.masterand.app.game.helpers
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf

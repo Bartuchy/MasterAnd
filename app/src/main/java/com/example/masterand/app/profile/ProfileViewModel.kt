@@ -1,4 +1,4 @@
-package com.example.masterand.viewmodel
+package com.example.masterand.app.profile
 
 import android.net.Uri
 import android.util.Log

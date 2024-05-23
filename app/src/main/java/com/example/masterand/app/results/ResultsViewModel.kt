@@ -1,4 +1,4 @@
-package com.example.masterand.viewmodel
+package com.example.masterand.app.results
 
 import androidx.lifecycle.ViewModel
 import com.example.masterand.db.broker.PlayerWithScore

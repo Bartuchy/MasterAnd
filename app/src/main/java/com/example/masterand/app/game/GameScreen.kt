@@ -1,8 +1,5 @@
-package com.example.masterand
+package com.example.masterand.app.game
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColor
@@ -35,7 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,33 +47,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.masterand.ui.theme.MasterAndTheme
-import com.example.masterand.viewmodel.GameViewModel
+import com.example.masterand.app.game.helpers.RowData
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-
-class GameActivity : ComponentActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            MasterAndTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    GameScreen(
-                        onNavigateToProfileScreen = {},
-                        onNavigateToResultsScreen = {},
-                        numberOfColors = 5,
-                        playerId = 1L
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun GameScreen(
@@ -89,20 +61,6 @@ fun GameScreen(
 ) {
     viewModel.numberOfColors = numberOfColors
     viewModel.playerId = playerId
-//    val availableColors = generateRandomColors(numberOfColors)
-//    val correctColors = selectRandomColors(availableColors)
-//
-//
-//    val data = remember {
-//        mutableStateListOf(RowData(1))
-//    }
-//    val score = remember {
-//        mutableIntStateOf(1)
-//    }
-//
-//    val isWon = remember {
-//        mutableStateOf(false)
-//    }
 
     Column(
         modifier = Modifier
@@ -132,11 +90,7 @@ fun GameScreen(
                 AnimatedVisibility(
                     visible = rowVisible.value,
                     enter = expandVertically(
-                        expandFrom = Alignment.Top,
-//                        animationSpec = tween(
-//                            durationMillis = 500,
-//                            easing = LinearOutSlowInEasing
-//                        )
+                        expandFrom = Alignment.Top
                     )
                 ) {
                     GameRow(
@@ -373,21 +327,6 @@ fun LogoutButton(onNavigateToProfileScreen: () -> Unit) {
     }
 }
 
-//private fun generateRandomColors(numberOfColors: Int): List<Color> {
-//    val randomColors = mutableListOf<Color>()
-//
-//    repeat(numberOfColors) {
-//        val red = Random.nextFloat()
-//        val green = Random.nextFloat()
-//        val blue = Random.nextFloat()
-//
-//        val color = Color(red, green, blue)
-//        randomColors.add(color)
-//    }
-//
-//    return randomColors
-//}
-
 private fun selectNextAvailableColor(
     availableColors: List<Color>,
     selectedColors: List<Color>,
@@ -405,10 +344,6 @@ private fun selectNextAvailableColor(
         dropWhile[0]
     }
 }
-
-//private fun selectRandomColors(availableColors: List<Color>): List<Color> {
-//    return availableColors.shuffled().take(4)
-//}
 
 private fun checkColors(
     pickedColors: List<Color>,

@@ -1,22 +1,14 @@
-package com.example.masterand
+package com.example.masterand.app.profile
 
 import android.net.Uri
-import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.core.EaseIn
-import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,7 +25,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -50,96 +41,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import coil.compose.AsyncImage
-import com.example.masterand.ui.theme.MasterAndTheme
-import com.example.masterand.viewmodel.ProfileViewModel
-import dagger.hilt.android.AndroidEntryPoint
+import com.example.masterand.R
+import com.example.masterand.app.profile.helpers.OutlinedTextFieldsFactory
+import com.example.masterand.app.profile.helpers.OutlinedTextFieldsValidator
 import kotlinx.coroutines.launch
-
-@AndroidEntryPoint
-class PlayerProfileActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            MasterAndTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val navController = rememberNavController()
-                    NavigationGraph(navController)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun NavigationGraph(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = "ProfileScreen") {
-        composable(route = "ProfileScreen",
-            enterTransition = {
-                fadeIn(animationSpec = tween(500)) +
-                        slideIntoContainer(
-                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                            animationSpec = tween(
-                                durationMillis = 500,
-                                easing = EaseIn
-                            )
-                        )
-            },
-            exitTransition = {
-                fadeOut(animationSpec = tween(500)) +
-                        slideOutOfContainer(
-                            towards = AnimatedContentTransitionScope.SlideDirection.End,
-                            animationSpec = tween(
-                                durationMillis = 500,
-                                easing = EaseOut
-                            )
-                        )
-            }) {
-            ProfileScreen(onNavigateToGameScreen = { playerId, numberOfColors ->
-                navController.navigate(
-                    "GameScreen/$playerId/$numberOfColors"
-                )
-            })
-        }
-        composable(
-            "GameScreen/{playerId}/{numberOfColors}",
-            arguments = listOf(navArgument("numberOfColors") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val playerId = backStackEntry.arguments?.getString("playerId")!!.toLong()
-            val numberOfColors = backStackEntry.arguments?.getString("numberOfColors")!!.toInt()
-
-            GameScreen(
-                onNavigateToProfileScreen = { navController.navigate("ProfileScreen") },
-                onNavigateToResultsScreen = { score -> navController.navigate("ResultsScreen/$playerId/$score/$numberOfColors") },
-                numberOfColors = numberOfColors,
-                playerId = playerId
-            )
-
-        }
-        composable("ResultsScreen/{playerId}/{score}/{numberOfColors}") { backStackEntry ->
-            val score = backStackEntry.arguments?.getString("score")!!.toInt()
-            val numberOfColors = backStackEntry.arguments?.getString("numberOfColors")!!.toInt()
-            val playerId = backStackEntry.arguments?.getString("playerId")!!.toLong()
-
-            ResultsScreen(
-                onNavigateToGameScreen = { navController.navigate("GameScreen/$playerId/$numberOfColors") },
-                onNavigateToProfileScreen = { navController.navigate("ProfileScreen") },
-                score = score
-            )
-        }
-    }
-
-}
-
 
 @Composable
 fun ProfileScreen(
@@ -158,7 +64,6 @@ fun ProfileScreen(
 
         TitleText()
 
-//        var profileImageUri by remember { mutableStateOf<Uri?>(null) }
 
         val imagePicker = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.PickVisualMedia(),
@@ -174,23 +79,13 @@ fun ProfileScreen(
             )
         })
 
-//        val errors = remember {
-//            mutableStateMapOf(
-//                Pair("name", false), Pair("email", false), Pair("numberOfColors", false)
-//            )
-//        }
-
-//        val name = rememberSaveable { mutableStateOf("") }
-//        val email = rememberSaveable { mutableStateOf("") }
-//        val numberOfColors = rememberSaveable { mutableStateOf("") }
-
         OutlinedTextFieldWithError(
             viewModel.name,
             viewModel.email,
             viewModel.numberOfColors,
             viewModel.errors
         )
-        println("xd" + viewModel.errors.values.toList())
+
         StartGameButtonWithValidation(
             viewModel,
             onNavigateToGameScreen,
@@ -345,11 +240,3 @@ fun StartGameButtonWithValidation(
         Text("Start game")
     }
 }
-
-//@Preview
-//@Composable
-//fun ProfileScreenInitialPreview() {
-//    MasterAndTheme {
-//        ProfileScreenInitial()
-//    }
-//}
