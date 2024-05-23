@@ -1,7 +1,6 @@
 package com.example.masterand.deprecated
 
 import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
 
 @Deprecated(message = "replaced by dagger hilt")
 class MasterAndApplication : Application() {

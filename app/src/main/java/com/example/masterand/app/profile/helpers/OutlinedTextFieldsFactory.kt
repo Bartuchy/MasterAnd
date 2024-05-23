@@ -31,7 +31,7 @@ class OutlinedTextFieldsFactory {
         validate: (String) -> Boolean
     ) {
         val hasInteracted = remember { mutableStateOf(false) }
-        var isError = hasInteracted.value && !validate(text.value)
+        val isError = hasInteracted.value && !validate(text.value)
 
         OutlinedTextField(
             modifier = Modifier

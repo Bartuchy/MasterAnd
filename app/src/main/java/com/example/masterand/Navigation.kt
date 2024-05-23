@@ -12,6 +12,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.masterand.app.game.GameScreen
 import com.example.masterand.app.profile.ProfileScreen
 import com.example.masterand.app.results.ResultsScreen
 
