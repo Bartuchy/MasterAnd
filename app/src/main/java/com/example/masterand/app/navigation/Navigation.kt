@@ -1,4 +1,4 @@
-package com.example.masterand
+package com.example.masterand.app.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.EaseIn

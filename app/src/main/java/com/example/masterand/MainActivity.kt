@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
+import com.example.masterand.app.navigation.NavigationGraph
 import com.example.masterand.ui.theme.MasterAndTheme
 import dagger.hilt.android.AndroidEntryPoint
 
