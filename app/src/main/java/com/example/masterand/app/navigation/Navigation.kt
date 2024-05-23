@@ -13,42 +13,30 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.masterand.app.game.GameScreen
+import com.example.masterand.app.navigation.animations.NavigationAnimations
 import com.example.masterand.app.profile.ProfileScreen
 import com.example.masterand.app.results.ResultsScreen
 
 @Composable
 fun NavigationGraph(navController: NavHostController) {
+    val navigationAnimations = NavigationAnimations()
+
     NavHost(navController = navController, startDestination = "ProfileScreen") {
-        composable(route = "ProfileScreen",
-            enterTransition = {
-                fadeIn(animationSpec = tween(500)) +
-                        slideIntoContainer(
-                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                            animationSpec = tween(
-                                durationMillis = 500,
-                                easing = EaseIn
-                            )
-                        )
-            },
-            exitTransition = {
-                fadeOut(animationSpec = tween(500)) +
-                        slideOutOfContainer(
-                            towards = AnimatedContentTransitionScope.SlideDirection.End,
-                            animationSpec = tween(
-                                durationMillis = 500,
-                                easing = EaseOut
-                            )
-                        )
-            }) {
-            ProfileScreen(onNavigateToGameScreen = { playerId, numberOfColors ->
-                navController.navigate(
-                    "GameScreen/$playerId/$numberOfColors"
-                )
-            })
-        }
         composable(
-            "GameScreen/{playerId}/{numberOfColors}",
-            arguments = listOf(navArgument("numberOfColors") { type = NavType.StringType })
+            route = "ProfileScreen",
+            enterTransition = { navigationAnimations.enterTransitionAnimation() },
+            exitTransition = { navigationAnimations.exitTransitionAnimation() }
+        ) {
+            ProfileScreen(
+                onNavigateToGameScreen = { playerId, numberOfColors ->
+                    navController.navigate("GameScreen/$playerId/$numberOfColors")
+                })
+        }
+
+        composable(
+            route = "GameScreen/{playerId}/{numberOfColors}",
+            enterTransition = { navigationAnimations.enterTransitionAnimation() },
+            exitTransition = { navigationAnimations.exitTransitionAnimation() }
         ) { backStackEntry ->
             val playerId = backStackEntry.arguments?.getString("playerId")!!.toLong()
             val numberOfColors = backStackEntry.arguments?.getString("numberOfColors")!!.toInt()
@@ -61,7 +49,12 @@ fun NavigationGraph(navController: NavHostController) {
             )
 
         }
-        composable("ResultsScreen/{playerId}/{score}/{numberOfColors}") { backStackEntry ->
+
+        composable(
+            route = "ResultsScreen/{playerId}/{score}/{numberOfColors}",
+            enterTransition = { navigationAnimations.enterTransitionAnimation() },
+            exitTransition = { navigationAnimations.exitTransitionAnimation() }
+        ) { backStackEntry ->
             val score = backStackEntry.arguments?.getString("score")!!.toInt()
             val numberOfColors = backStackEntry.arguments?.getString("numberOfColors")!!.toInt()
             val playerId = backStackEntry.arguments?.getString("playerId")!!.toLong()
