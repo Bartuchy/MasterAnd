@@ -27,10 +27,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,9 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.masterand.R
-import com.example.masterand.app.profile.helpers.OutlinedTextFieldsFactory
+import com.example.masterand.app.profile.helpers.CustomOutlinedTextField
 import com.example.masterand.app.profile.helpers.OutlinedTextFieldsValidator
-import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
@@ -60,10 +57,7 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-
         TitleText()
-
 
         val imagePicker = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.PickVisualMedia(),
@@ -79,18 +73,8 @@ fun ProfileScreen(
             )
         })
 
-        OutlinedTextFieldWithError(
-            viewModel.name,
-            viewModel.email,
-            viewModel.numberOfColors,
-            viewModel.errors
-        )
-
-        StartGameButtonWithValidation(
-            viewModel,
-            onNavigateToGameScreen,
-            errors = viewModel.errors
-        )
+        OutlinedTextFieldWithError(viewModel)
+        StartGameButtonWithValidation(viewModel, onNavigateToGameScreen)
     }
 }
 
@@ -163,26 +147,23 @@ fun ProfileImageWithPicker(
             )
         }
     }
+
     Spacer(modifier = Modifier.height(16.dp))
 }
 
 @Composable
 fun OutlinedTextFieldWithError(
-    name: MutableState<String>,
-    email: MutableState<String>,
-    numberOfColors: MutableState<String>,
-    errors: SnapshotStateMap<String, Boolean>
+    viewModel: ProfileViewModel
 ) {
     fun updateErrorState(key: String, value: Boolean) {
-        errors[key] = value
+        viewModel.errors[key] = value
     }
 
-    val outlinedTextFieldsFactory = OutlinedTextFieldsFactory()
     val outlinedTextFieldsValidator = OutlinedTextFieldsValidator()
 
-    outlinedTextFieldsFactory.ProduceOutlinedTextField(
+    CustomOutlinedTextField(
         label = "Enter name",
-        name,
+        viewModel.name,
         supportingText = "Name can't be empty",
         validate = { text ->
             val isValid = outlinedTextFieldsValidator.isNameFieldValid(text)
@@ -190,9 +171,9 @@ fun OutlinedTextFieldWithError(
             isValid
         }
     )
-    outlinedTextFieldsFactory.ProduceOutlinedTextField(
+    CustomOutlinedTextField(
         label = "Enter email",
-        email,
+        viewModel.email,
         supportingText = "Email should be in proper format and can't be empty",
         validate = { text ->
             val isValid = outlinedTextFieldsValidator.isEmailFieldValid(text)
@@ -200,10 +181,10 @@ fun OutlinedTextFieldWithError(
             isValid
         }
     )
-    outlinedTextFieldsFactory.ProduceOutlinedTextField(
+    CustomOutlinedTextField(
         label = "Enter number of colors",
-        numberOfColors,
-        supportingText = "Number of colors should be between 5 and 10 adn can't be empty",
+        viewModel.numberOfColors,
+        supportingText = "Number of colors should be between 5 and 10 and can't be empty",
         validate = { text ->
             val isValid = outlinedTextFieldsValidator.isNumOfColorsFieldValid(text)
             updateErrorState("numberOfColors", isValid)
@@ -216,26 +197,14 @@ fun OutlinedTextFieldWithError(
 fun StartGameButtonWithValidation(
     viewModel: ProfileViewModel,
     onNavigateToGameScreen: (playerId: Long, numberOfColors: String) -> Unit,
-    errors: SnapshotStateMap<String, Boolean>
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val hasErrors = errors.values.contains(false)
+    val hasErrors = viewModel.errors.values.contains(false)
 
     Button(
         modifier = Modifier.fillMaxWidth(),
         enabled = !hasErrors,
-        onClick = {
-            coroutineScope.launch {
-                var loggedInPlayerId = viewModel.savePlayer()
-                println("PlayerID: $loggedInPlayerId")
-                if (loggedInPlayerId == -1L) {
-                    val player = viewModel.getPlayerByEmail()
-                    loggedInPlayerId = player?.playerId ?: -1L
-                }
-                onNavigateToGameScreen(loggedInPlayerId, viewModel.numberOfColors.value)
-            }
-
-        }
+        onClick = { viewModel.onStartGameClick(coroutineScope, onNavigateToGameScreen) }
     ) {
         Text("Start game")
     }

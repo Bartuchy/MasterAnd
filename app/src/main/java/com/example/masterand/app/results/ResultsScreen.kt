@@ -30,7 +30,6 @@ fun ResultsScreen(
     onNavigateToGameScreen: () -> Unit,
     score: Int
 ) {
-    println("results $score")
     Column(
         modifier = Modifier
             .fillMaxSize()

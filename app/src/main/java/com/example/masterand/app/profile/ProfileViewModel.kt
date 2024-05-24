@@ -9,6 +9,8 @@ import androidx.lifecycle.ViewModel
 import com.example.masterand.db.entity.Player
 import com.example.masterand.db.repository.PlayerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -18,12 +20,26 @@ class ProfileViewModel @Inject constructor(private val playersRepository: Player
     val email = mutableStateOf("")
     val numberOfColors = mutableStateOf("")
     var profileImageUri = mutableStateOf<Uri?>(null)
+
     val errors = mutableStateMapOf(
         Pair("name", false), Pair("email", false), Pair("numberOfColors", false)
     )
 
+    fun onStartGameClick(
+        coroutineScope: CoroutineScope,
+        onNavigateToGameScreen: (playerId: Long, numberOfColors: String) -> Unit,
+    ) = coroutineScope.launch {
+        var loggedInPlayerId = savePlayer()
 
-    suspend fun savePlayer(): Long {
+        if (loggedInPlayerId == -1L) {
+            val player = getPlayerByEmail()
+            loggedInPlayerId = player?.playerId ?: -1L
+        }
+
+        onNavigateToGameScreen(loggedInPlayerId, numberOfColors.value)
+    }
+
+    private suspend fun savePlayer(): Long {
         var player: Player? = playersRepository.getPlayerByEmail(email.value)
         if (player != null) {
             player.name = name.value
@@ -41,7 +57,7 @@ class ProfileViewModel @Inject constructor(private val playersRepository: Player
         return playersRepository.insertPlayer(player)
     }
 
-    suspend fun getPlayerByEmail(): Player? {
+    private suspend fun getPlayerByEmail(): Player? {
         return playersRepository.getPlayerByEmail(email.value)
     }
 }
