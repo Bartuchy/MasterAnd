@@ -1,6 +1,5 @@
 package com.example.masterand.app.game
 
-import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.tween
@@ -47,7 +46,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.masterand.app.game.helpers.RowData
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -59,8 +57,7 @@ fun GameScreen(
     numberOfColors: Int,
     playerId: Long
 ) {
-    viewModel.numberOfColors = numberOfColors
-    viewModel.playerId = playerId
+    viewModel.init(numberOfColors, playerId)
 
     Column(
         modifier = Modifier
@@ -78,10 +75,10 @@ fun GameScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            items(items = viewModel.data) { row ->
+            items(items = viewModel.generatedRowData) { row ->
 
                 val rowVisible = remember(row.id) { mutableStateOf(false) }
-                if (row.id == viewModel.data.last().id) {
+                if (row.id == viewModel.generatedRowData.last().id) {
                     LaunchedEffect(key1 = row.id) {
                         rowVisible.value = true
                     }
@@ -97,30 +94,8 @@ fun GameScreen(
                         selectedColors = row.selectedColors,
                         callbackColors = row.callbackColors,
                         isClickable = row.isClickable,
-                        onSelectColorClick = { index ->
-                            row.selectedColors[index] = selectNextAvailableColor(
-                                availableColors = viewModel.availableColors,
-                                selectedColors = row.selectedColors,
-                                circularButtonIndex = index
-                            )
-                        },
-                        onCheckClick = {
-                            row.callbackColors.clear()
-                            row.callbackColors.addAll(
-                                checkColors(
-                                    pickedColors = row.selectedColors,
-                                    correctColors = viewModel.correctColors
-                                )
-                            )
-                            row.isClickable = false
-                            if (viewModel.correctColors != row.selectedColors) {
-                                viewModel.data.add(RowData(row.id + 1))
-                                viewModel.score.intValue++
-                            } else {
-                                viewModel.isWon.value = true
-                            }
-                        },
-                        isFilled = row.isFilled
+                        onSelectColorClick = { index -> row.onSelectColorClick(index, viewModel) },
+                        onCheckClick = { row.onCheckClick(viewModel) }
                     )
                 }
             }
@@ -132,6 +107,7 @@ fun GameScreen(
                 viewModel
             )
         }
+
         Spacer(modifier = Modifier.weight(1f))
         LogoutButton(onNavigateToProfileScreen = onNavigateToProfileScreen)
 
@@ -155,7 +131,6 @@ fun GameRow(
     isClickable: Boolean,
     onSelectColorClick: (circularButtonIndex: Int) -> Unit,
     onCheckClick: () -> Unit,
-    isFilled: Boolean
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         SelectableColorsRow(selectedColors, onSelectColorClick)
@@ -199,30 +174,13 @@ fun SelectableColorsRow(colors: List<Color>, onClick: (circularButtonIndex: Int)
 
 @Composable
 fun CircularButton(onClick: () -> Unit, color: Color) {
-    val colorAnimation0 = remember { Animatable(Color.Blue) }
-    val colorAnimation1 = remember { Animatable(Color.Red) }
-
-    // Stan wewnętrzny śledzący, czy przycisk jest w stanie początkowym.
     var isInitial by remember { mutableStateOf(true) }
-
-    // Stan wewnętrzny śledzący, czy ma wystąpić animacja.
     var animate by remember { mutableStateOf(false) }
-
-    // Stan wewnętrzny śledzący poprzedni kolor przycisku.
-    var oldColor by remember { mutableStateOf(Color.Gray) }
-
-    // Utworzenie obiektu Transition, który kontroluje animacje przy zmianie stanu.
+    var oldColor by remember { mutableStateOf(Color.White) }
     val transition = updateTransition(isInitial, label = "")
-
-    // Animacja koloru przycisku przy pomocy Transition.
     val animatedColor by transition.animateColor(label = "") { initialState ->
         if (initialState) color else oldColor
     }
-
-//    LaunchedEffect(colors) {
-//        colorAnimation0.animateTo(Color.Yellow, animationSpec = tween(500))
-//        colorAnimation1.animateTo(Color.Blue, animationSpec = tween(500))
-//    }
 
 
     Button(
@@ -325,36 +283,4 @@ fun LogoutButton(onNavigateToProfileScreen: () -> Unit) {
     Button(modifier = Modifier.padding(16.dp), onClick = { onNavigateToProfileScreen() }) {
         Text(text = "Logout")
     }
-}
-
-private fun selectNextAvailableColor(
-    availableColors: List<Color>,
-    selectedColors: List<Color>,
-    circularButtonIndex: Int
-): Color {
-    val selectedColor = selectedColors[circularButtonIndex]
-    val remainingAvailableColors = selectedColors.filterNot { it in selectedColors }
-
-    val dropWhile: List<Color> = availableColors.filterNot { it in remainingAvailableColors }
-    val selectedColorIndex = dropWhile.indexOf(selectedColor)
-
-    return if (selectedColorIndex + 1 < dropWhile.size) {
-        dropWhile[selectedColorIndex + 1]
-    } else {
-        dropWhile[0]
-    }
-}
-
-private fun checkColors(
-    pickedColors: List<Color>,
-    correctColors: List<Color>
-): List<Color> {
-    val selectionResults = mutableListOf(Color.White, Color.White, Color.White, Color.White)
-    pickedColors.forEachIndexed { index, color ->
-        if (correctColors.contains(color)) {
-            if (correctColors[index] == color) selectionResults[index] = Color.Red
-            else selectionResults[index] = Color.Yellow
-        } else selectionResults[index] = Color.White
-    }
-    return selectionResults
 }
